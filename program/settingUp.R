@@ -1812,3 +1812,68 @@ ORA_cluster_results_interaction$KEGG[grepl("OXIDATIVE",ORA_cluster_results_inter
 ORA_cluster_results_interaction$GO[grepl("immun",ORA_cluster_results_interaction$GO$Description),c("Description","GeneRatio","qvalue","geneNames")]
 
 
+# Mothers ----
+## here we load kallisto data ----
+se_fly_mothers <- dds_kallisto_mothers
+se_fly_mothers$Gender <- "female"
+se_fly_mothers$Condition <- gsub("s","S",se_fly_mothers$Condition)
+se_fly_mothers$Condition <- as.factor(se_fly_mothers$Condition)
+se_fly_mothers$Merged <- se_fly_mothers$Condition
+
+## Do inital filtering ----
+
+library("DESeq2")
+
+ddsSE_mothers <- DESeqDataSet(se_fly_mothers, design = ~ Condition)
+ddsSE_mothers$Diet <- relevel(ddsSE_mothers$Condition, ref = "CD")
+
+design(ddsSE_mothers)
+ddsSE_preFilter_mothers <- ddsSE_mothers
+ddsSE_mothers <- preprocessing(
+  ddsSE_preFilter_mothers,
+  10,
+  protCodingOnly=T,
+  removeConstRows=T,
+  filterPerSample=T)
+
+de_seq_mothers <- DESeq(ddsSE_mothers) 
+
+de_seq_all_vst_mothers <- vst(de_seq_mothers, blind=T)
+
+library(ggplot2)
+PCA_Data <- doPCA(
+  de_seq_all_vst_mothers,
+  xPC = "PC1",
+  yPC = "PC2",
+  colorTheme = colorTheme,
+  shapeVar = NULL, # one of colnames in colData(dds)
+  colorVar = "Condition" # one of colnames in colData(dds)
+)
+
+PCA_Data
+
+
+ggplot(PCA_Data$data, 
+       aes(x = PC1, 
+           y = PC2, 
+           color = Conc.pg_Per_uL.)) +
+  scale_color_gradient(low = "blue", high = "red") +
+  geom_point(size = 3) +
+  coord_fixed()+
+  theme_classic()+
+  theme(text=element_text(size = 21),aspect.ratio = 1)
+
+ggplot(PCA_Data$data, 
+       aes(x = PC1, 
+           y = PC2, 
+           color = Rin)) +
+  scale_color_gradient(low = "blue", high = "red") +
+  geom_point(size = 3) +
+  coord_fixed()+
+  theme_classic()+
+  theme(text=element_text(size = 21),aspect.ratio = 1)
+
+
+summary(results(de_seq_mothers,contrast = list("Condition_HFD_vs_CD")))
+
+summary(results(de_seq_mothers,contrast = list("Condition_HSD_vs_CD")))

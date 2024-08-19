@@ -28,13 +28,18 @@ doPCA <- function(dds,
   
   # Define data for plotting
   pcaData <- data.frame(pca$x,colData(dds))
-  if(is.factor(pcaData[,colorVar])){
-    #assume correct ordering of levels
+  if(is.numeric(pcaData[,colorVar])){
+    if(is.factor(pcaData[,colorVar])){
+      #assume correct ordering of levels
+    }else{
+      pcaData[,colorVar] = factor(pcaData[,colorVar],
+                                  levels = as.character(unique(pcaData[,colorVar])),
+                                  ordered = T)
+    }
   }else{
-    pcaData[,colorVar] = factor(pcaData[,colorVar],
-                                levels = as.character(unique(pcaData[,colorVar])),
-                                ordered = T)
+    
   }
+
 if(is.null(colorTheme) & !is.null(shapeVar)){
   pca_plot <- ggplot(pcaData, aes(x = pcaData[,xPC],
                                   y = pcaData[,yPC])) +
@@ -49,15 +54,15 @@ if(is.null(colorTheme) & !is.null(shapeVar)){
 }else if(!is.null(colorTheme) & is.null(shapeVar)){
   pca_plot <- ggplot(pcaData, aes(x = pcaData[,xPC],
                                   y = pcaData[,yPC])) +
-    geom_point(size =3,aes(fill = pcaData[,colorVar]))+
-    scale_fill_manual(values = colorTheme,
+    geom_point(size =3,aes(color = pcaData[,colorVar]))+
+    scale_color_manual(values = colorTheme,
                        name = colorVar) +
     xlab(paste0(names(percentVar[xPC]),": ",percentVar[xPC], "% variance")) +
     ylab(paste0(names(percentVar[yPC]),": ", percentVar[yPC], "% variance")) +
     coord_fixed()+
     theme_classic()+
     theme(text=element_text(size = 21),aspect.ratio = 1)
-  }else{
+}else{
   pca_plot <- ggplot(pcaData, aes(x = pcaData[,xPC],
                                   y = pcaData[,yPC])) +
     geom_point(size =3,aes(fill = pcaData[,colorVar],shape = pcaData[,shapeVar]))+
