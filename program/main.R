@@ -347,7 +347,7 @@ mainEffectVis(res_list,color=colors2use)
 res_list <- list(totelEffect_Day10_HSD = results(DE_SE_male, contrast=list(c("Diet_HSD_vs_CD","DietHSD.Day10"))),
                  totelEffect_Day50_HSD = results(DE_SE_male, contrast=list(c("Diet_HSD_vs_CD","DietHSD.Day50"))))
 
-mainEffectVis(res_list,color=colors2use)
+mainEffectVis(res_list,color = colors2use)
 
 
 # Set comparison ----
@@ -363,15 +363,15 @@ for(i in c("HSD","HFD")){
       de_seq_tmp <- DE_SE_male
     }
     
-    counter = counter+1
+    counter = counter + 1
     
     dif0 = paste0("pAdjOnly_Diet_",i,"_CD_Day0_",j)
     dif10 = paste0("pAdjOnly_Diet_",i,"_CD_Day10_",j)
     dif50 = paste0("pAdjOnly_Diet_",i,"_CD_Day50_",j)
     
     comp0 = paste0("Diet_",i,"_vs_CD")
-    comp10=paste0("Diet",i,".Day10")
-    comp50=paste0("Diet",i,".Day50")
+    comp10 = paste0("Diet",i,".Day10")
+    comp50 = paste0("Diet",i,".Day50")
     
     # Diet
     #Day0
@@ -434,10 +434,139 @@ for(sex in c("Female","Male")){
                        paste0("./DEG_lists_withinDay_DietDiff_",sex,".xlsx"))
 }
 
-## Note that from provided all enrichments, selected terms were specified and further shown in the following section
-# was placed in results section
+
+library(msigdbr)
+library(org.Dm.eg.db)
+# take union of males & female identified genes
+universe_entrez_all <- clusterProfiler::bitr(rownames(ddsSE_split),
+                                            fromType = "FLYBASE",
+                                            toType = "ENTREZID",
+                                            OrgDb = org.Dm.eg.db)$ENTREZID
+
+for(diet in c("HFD","HSD")){
+  for(sex in c("Male","Female")){
+    data_day0 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_0_",sex,"_DEG"))
+    data_day10 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_10_",sex,"_DEG"))
+    data_day50 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_50_",sex,"_DEG"))
+    
+    gg_day_venn_UP <- ggVennDiagram(list(data_day0_UP = subset(data_day0,padj < 0.1 & log2FoldChange > 0)$GeneName,
+                                      data_day10_UP = subset(data_day10,padj < 0.1 & log2FoldChange > 0)$GeneName,
+                                      data_day50_UP = subset(data_day50,padj < 0.1 & log2FoldChange > 0)$GeneName
+    ),
+    label = "count")+ 
+      scale_x_continuous(expand = expansion(mult = .2))+ 
+      scale_fill_distiller(palette = "Reds", direction = 1)
+    
+    gg_day_venn_DOWN <- ggVennDiagram(list(data_day0_DOWN =subset(data_day0,padj<0.1 & log2FoldChange <0)$GeneName,
+                                         data_day10_DOWN =subset(data_day10,padj<0.1 & log2FoldChange <0)$GeneName,
+                                         data_day50_DOWN = subset(data_day50,padj<0.1 & log2FoldChange <0)$GeneName
+    ),
+    label = "count")+ 
+      scale_x_continuous(expand = expansion(mult = .2))+ 
+      scale_fill_distiller(palette = "Reds", direction = 1)
+    
+    ggsave(paste0("../results/ggVenn_designGroup_",sex,"_",diet,"_DOWN.svg"),plot=gg_day_venn_DOWN)
+    ggsave(paste0("../results/ggVenn_designGroup_",sex,"_",diet,"_UP.svg"),plot=gg_day_venn_UP)
+
+    # do enrichment for all Diet (not the interactions)
+    unique_UP_diet <- subset(data_day50,padj<0.1 & log2FoldChange >0)$GeneID
+    unique_DOWN_diet <- subset(data_day50,padj<0.1 & log2FoldChange <0)$GeneID
+    
+    sets <- list(unique_UP = unique_UP_diet,
+                 unique_DOWN_HSD = unique_DOWN_diet
+                 )
+    
+    for(i in names(sets)){
+      geneSetChoice_tranlsated <- clusterProfiler::bitr(sets[[i]],
+                                                        fromType="FLYBASE",
+                                                        toType="ENTREZID",
+                                                        OrgDb=org.Dm.eg.db)$ENTREZID
+      
+      filename <- paste0("../results/",sex,"_",diet,"_",i)
+      ORA_cluster_results_interaction <- doOra(
+        geneSetChoice_tranlsated, # ENSEBML
+        type=c("GO","KEGG","HALLMARK"),
+        levelGOTerms=8,
+        universe_entrez_all,
+        GoFilter=T,
+        filename = filename # will be ORA_[filename][type].png
+      )
+      
+      openxlsx::write.xlsx(ORA_cluster_results_interaction,file = paste0(filename,".xlsx"))
+      
+    }
+  }
+}
+
+
 
 # Enrichment ----
+library(msigdbr)
+library(org.Dm.eg.db)
+# take union of males & female identified genes
+universe_entrez_all <- clusterProfiler::bitr(rownames(ddsSE_split),
+                                             fromType = "FLYBASE",
+                                             toType = "ENTREZID",
+                                             OrgDb = org.Dm.eg.db)$ENTREZID
+
+for(diet in c("HFD","HSD")){
+  for(sex in c("Male","Female")){
+    data_day0 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_0_",sex,"_DEG"))
+    data_day10 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_10_",sex,"_DEG"))
+    data_day50 <- openxlsx::read.xlsx(paste0("../results/DEG_lists_withinDay_DietDiff_",sex,".xlsx"),sheet = paste0(diet,"_CD_Day_50_",sex,"_DEG"))
+    
+    gg_day_venn_UP <- ggVennDiagram(list(data_day0_UP = subset(data_day0,padj < 0.1 & log2FoldChange > 0)$GeneName,
+                                         data_day10_UP = subset(data_day10,padj < 0.1 & log2FoldChange > 0)$GeneName,
+                                         data_day50_UP = subset(data_day50,padj < 0.1 & log2FoldChange > 0)$GeneName
+    ),
+    label = "count")+ 
+      scale_x_continuous(expand = expansion(mult = .2))+ 
+      scale_fill_distiller(palette = "Reds", direction = 1)
+    
+    gg_day_venn_DOWN <- ggVennDiagram(list(data_day0_DOWN =subset(data_day0,padj<0.1 & log2FoldChange <0)$GeneName,
+                                           data_day10_DOWN =subset(data_day10,padj<0.1 & log2FoldChange <0)$GeneName,
+                                           data_day50_DOWN = subset(data_day50,padj<0.1 & log2FoldChange <0)$GeneName
+    ),
+    label = "count")+ 
+      scale_x_continuous(expand = expansion(mult = .2))+ 
+      scale_fill_distiller(palette = "Reds", direction = 1)
+    
+    ggsave(paste0("../results/ggVenn_designGroup_",sex,"_",diet,"_DOWN.svg"),plot=gg_day_venn_DOWN)
+    ggsave(paste0("../results/ggVenn_designGroup_",sex,"_",diet,"_UP.svg"),plot=gg_day_venn_UP)
+    
+    # do enrichment for all Diet (not the interactions)
+    unique_UP_diet <- subset(data_day50,padj<0.1 & log2FoldChange >0)$GeneID
+    unique_DOWN_diet <- subset(data_day50,padj<0.1 & log2FoldChange <0)$GeneID
+    
+    sets <- list(unique_UP = unique_UP_diet,
+                 unique_DOWN_HSD = unique_DOWN_diet
+    )
+    
+    for(i in names(sets)){
+      geneSetChoice_tranlsated <- clusterProfiler::bitr(sets[[i]],
+                                                        fromType="FLYBASE",
+                                                        toType="ENTREZID",
+                                                        OrgDb=org.Dm.eg.db)$ENTREZID
+      
+      filename <- paste0("../results/",sex,"_",diet,"_",i)
+      ORA_cluster_results_interaction <- doOra(
+        geneSetChoice_tranlsated, # ENSEBML
+        type=c("GO","KEGG","HALLMARK"),
+        levelGOTerms=8,
+        universe_entrez_all,
+        GoFilter=T,
+        filename = filename # will be ORA_[filename][type].png
+      )
+      
+      openxlsx::write.xlsx(ORA_cluster_results_interaction,file = paste0(filename,".xlsx"))
+      
+    }
+  }
+}
+
+
+## Note that from provided all enrichments, selected terms were specified and further shown in the following section
+# was placed in results section
 # vis selected terms 
 sheetNames <- openxlsx::getSheetNames("../results/Selected_terms_males_EM.xlsx")
 selectedTerms_males_list <- lapply(sheetNames, function(x) openxlsx::read.xlsx("../results/Selected_terms_males_EM.xlsx",sheet = x))
