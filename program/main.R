@@ -435,6 +435,7 @@ for(sex in c("Female","Male")){
 }
 
 ## Note that from provided all enrichments, selected terms were specified and further shown in the following section
+# was placed in results section
 
 # Enrichment ----
 # vis selected terms 
