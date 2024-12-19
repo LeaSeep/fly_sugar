@@ -8,5 +8,6 @@ Specifically you will find the following scripts:
 
 Note: some custom functions are provided and gathered in the  utils folder.
 
-The data used in this analysis is available at the following link: [TO ADD]
+The data used in this analysis is available at NCBI GEO Series number: GSE284632
+https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE284632
 
